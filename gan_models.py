@@ -261,3 +261,78 @@ def create_generator(latent_size=100, output_size=784):
     h = keras.layers.Dense(output_size)(h)
     y = activations.tanh(h)
     return keras.Model(inputs=inputs, outputs=y, name="generator")
+
+
+def create_dcdiscriminator(input_shape, ndf):
+    """Create a discriminator model for DCGAN.
+    Args:
+        ndf: int, number of discriminator filters
+        nc: int, number of channels
+    
+    Returns:
+        keras.Model
+    """
+
+    inputs = keras.Input(shape=input_shape)
+
+    h = keras.layers.Conv2D(ndf, kernel_size=(4, 4), strides=(2, 2), padding="same")(inputs)
+    h = keras.layers.LeakyReLU(0.2)(h)
+
+    h = keras.layers.Conv2D(ndf * 2, kernel_size=(4, 4), strides=(2, 2), padding="same")(h)
+    h = keras.layers.BatchNormalization()(h)
+    h = keras.layers.LeakyReLU(0.2)(h)
+
+    h = keras.layers.Conv2D(ndf * 4, kernel_size=(4, 4), strides=(2, 2), padding="same")(h)
+    h = keras.layers.BatchNormalization()(h)
+    h = keras.layers.LeakyReLU(0.2)(h)
+
+    h = keras.layers.Flatten()(h)
+    y = keras.layers.Dense(1)(h)
+    return keras.Model(inputs=inputs, outputs=y, name="dcdiscriminator")
+
+def create_dcgenerator(nz, ngf, nc):
+    """Create a generator model for DCGAN.
+    Args:
+        nz: int, latent dimension
+        ngf: int, number of generator filters
+        nc: int, number of channels
+    
+    Returns:
+        keras.Model
+    """
+    # inputs = keras.Input(shape=(1, 1, nz))
+    inputs = keras.Input(shape=(nz, ))
+
+    # reshape to (1, 1, nz)
+    r_inputs = keras.layers.Reshape((1, 1, nz))(inputs)
+
+    # state size: 4 x 4 x (ngf*8)
+    h = keras.layers.Conv2DTranspose(
+        filters=ngf*8, kernel_size=(4, 4), strides=(1, 1), padding="valid", use_bias=False
+    )(r_inputs)
+    h = keras.layers.BatchNormalization()(h)
+    h = keras.layers.ReLU()(h)
+
+    # state size: 8 x 8 x (ngf*4)
+    h = keras.layers.Conv2DTranspose(
+        filters=ngf*4, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False
+    )(h)
+    h = keras.layers.BatchNormalization()(h)
+    h = keras.layers.ReLU()(h)
+
+    # state size: 16 x 16 x (ngf*2)
+    h = keras.layers.Conv2DTranspose(ngf * 2, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False)(h)
+    h = keras.layers.BatchNormalization()(h)
+    h = keras.layers.ReLU()(h)
+
+    # # state size: (ngf*2) x 16 x 16
+    # h = keras.layers.Conv2DTranspose(ngf, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False)(h)
+    # h = keras.layers.BatchNormalization()(h)
+    # h = keras.layers.ReLU()(h)
+
+    # state size: 32 x 32 x nc
+    h = keras.layers.Conv2DTranspose(nc, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False)(h)
+    y = keras.layers.Activation("tanh")(h)
+    return keras.Model(inputs=inputs, outputs=y, name="dcgenerator")
+
+
