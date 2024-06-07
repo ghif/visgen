@@ -104,3 +104,5 @@ def visualize_grid(X, figpath=None):
     
     if figpath is not None:
         plt.savefig(figpath)
+    else:
+        plt.show()

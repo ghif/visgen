@@ -21,10 +21,10 @@ NC = 1 # number of channels
 NZ = 100 # latent dimension
 NGF = 32 # number of generator filters
 NDF = 32 # number of discriminator filters
-IMAGE_DIM = 32
+IMAGE_DIM = 32 # image dimension
 
 class DisplayCallback(keras.callbacks.Callback):
-    def __init__(self, latent_variable=None):
+    def __init__(self, latent_variable=None, condition_variable=None):
         super().__init__()
 
         self.train_steps = 0
@@ -33,11 +33,16 @@ class DisplayCallback(keras.callbacks.Callback):
         else:
             self.latent_variable = np.random.normal(size=(N_SAMPLES, NZ))
 
+        if condition_variable is not None:
+            self.condition_variable = condition_variable
+        else:
+            self.condition_variable = np.random.randint(0, 10, N_SAMPLES)
+
     def on_train_batch_end(self, batch, logs=None):
         keys = list(logs.keys())
         if self.train_steps % 100 == 0:
             # print(f" ... [{self.train_steps}] got log keys: {keys}")
-            fake_images = model.generator(self.latent_variable)
+            fake_images = model.cond_generator([self.latent_variable, self.condition_variable])
             fake_samples = np.reshape(fake_images, (-1, IMAGE_DIM, IMAGE_DIM, NC))
 
             checkpoint_path = os.path.join(checkpoint_dir, f"fake_images_step-{self.train_steps}.jpg")
@@ -64,26 +69,35 @@ x_test = (x_test - 127.5) / 127.5
 
 # Create tf data
 all_images = np.concatenate([x_train, x_test])
-dataset = tf.data.Dataset.from_tensor_slices(all_images)
+all_labels = np.concatenate([y_train, y_test])
+num_classes = len(np.unique(all_labels))
+
+dataset = tf.data.Dataset.from_tensor_slices((all_images, all_labels))
 dataset = dataset.shuffle(buffer_size=1024).batch(BATCH_SIZE)
 
 
-input_shape = (IMAGE_DIM, IMAGE_DIM, NC)
-disc_net = M.create_dcdiscriminator(input_shape, NDF)
+# disc_net = M.create_cond_discriminator(input_shape=(784, ), condition_size=num_classes)
+input_shape = (IMAGE_DIM, IMAGE_DIM, NC)    
+disc_net = M.create_cond_dcdiscriminator(input_shape, NDF, num_classes)
 # print(disc_net.summary())
 
-gen_net = M.create_dcgenerator(NZ, NGF, NC)
+gen_net = M.create_cond_dcgenerator(
+    NZ,
+    NGF,
+    NC,
+    num_classes
+)
 # print(gen_net.summary())
 
-
-model = M.GAN(
+model = M.CondDCGAN(
     discriminator=disc_net, 
     generator=gen_net, 
-    latent_dim=NZ
+    latent_dim=NZ,
+    condition_size=num_classes
 )
 print(model.summary(expand_nested=True))
 
-model.compile( 
+model.compile(
     d_optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
     g_optimizer=keras.optimizers.Adam(learning_rate=0.0002, beta_1=0.5),
     loss_fn=keras.losses.BinaryCrossentropy(from_logits=True)
@@ -92,12 +106,12 @@ model.compile(
 # Define callback for Model Checkpoint
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-checkpoint_dir = os.path.join(MODEL_DIR, f"dcgan-mnist-keras-{current_time}")
+checkpoint_dir = os.path.join(MODEL_DIR, f"cond-dcgan-mnist-keras-{current_time}")
 
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 
-samples = np.reshape(all_images[:N_SAMPLES], (-1, IMAGE_DIM, IMAGE_DIM, NC))
+samples = all_images[:N_SAMPLES]
 
 # Show real images
 U.visualize_grid(
@@ -111,9 +125,24 @@ modelcp_callback = keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     # save_weights_only=True
 )
+
+# cond_y = ops.one_hot(y_test, num_classes=num_classes)
+
+# ## for discriminator
+# cond_image_y = ops.expand_dims(cond_y, axis=(1, 2))
+# cond_imagerep_y = ops.repeat(cond_image_y, x_test[0].shape[0], axis=1)
+# cond_imagerep_y = ops.repeat(cond_imagerep_y, x_test[0].shape[1], axis=2)
+
+
 z = np.random.normal(size=(N_SAMPLES, NZ)) # fixed latent variable for visualization
+
+row = int(np.round(np.sqrt(N_SAMPLES)))
+cond_y = np.repeat(np.arange(row), row)
+cond_y = keras.utils.to_categorical(cond_y, num_classes=num_classes)
+
 display_callback = DisplayCallback(
-    latent_variable=z
+    latent_variable=z,
+    condition_variable=cond_y
 )
 
 model.fit(
