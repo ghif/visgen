@@ -2,11 +2,11 @@
 A compilation of some visual generative deep learning models implemented in Keras
 
 ## GAN
-MNIST
+![](gan_mnist.gif)
 
-<video width="400" height="400" controls>
+<!-- <video width="400" height="400" controls>
   <source src="gan_mnist.mov" type="video/mp4">
-</video>
+</video> -->
 
 ## Conditional GAN
 
