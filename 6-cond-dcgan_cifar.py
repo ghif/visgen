@@ -107,7 +107,7 @@ model.compile(
 # Define callback for Model Checkpoint
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-checkpoint_dir = os.path.join(MODEL_DIR, f"cond-dcgan-mnist-keras-{current_time}")
+checkpoint_dir = os.path.join(MODEL_DIR, f"cond-dcgan-cifar10-keras-{current_time}")
 
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
