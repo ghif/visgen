@@ -13,3 +13,6 @@ A compilation of some visual generative deep learning models implemented in Kera
 
 ## Conditional DC-GAN
 <img src="cond-dcgan_mnist.gif" alt="cond-dcgan_mnist" width="400"> | <img src="cond-dcgan_cifar10.gif" alt="cond-dcgan_cifar10" width="400">
+
+## Denoising Diffusion Implicit Model (DDIM)
+<img src="ddim_cifar10.gif" alt="ddim_cifar10" width="400"> 
