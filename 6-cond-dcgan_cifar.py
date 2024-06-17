@@ -13,7 +13,7 @@ import utils as U
 import gan_models as M
 
 # CONSTANTS
-EPOCHS = 50
+EPOCHS = 100
 BATCH_SIZE = 128
 N_SAMPLES = 64
 MODEL_DIR = "/Users/mghifary/Work/Code/AI/models"
